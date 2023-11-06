@@ -31,7 +31,7 @@ impl Actor for OperationsActor {
         OperationsActor::name()
     }
 
-    async fn run(&mut self) -> Result<(), RuntimeError> {
+    async fn run(mut self) -> Result<(), RuntimeError> {
         while let Some(input) = self.input_receiver.recv().await {
             match input {
                 OperationInput::MqttMessage(event) => {

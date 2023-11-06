@@ -40,7 +40,7 @@ impl Actor for ConfigManager {
         ConfigManager::name()
     }
 
-    async fn run(&mut self) -> Result<(), RuntimeError> {
+    async fn run(mut self) -> Result<(), RuntimeError> {
         loop {
             let maybe_response = tokio::select! {
                 Some(request) = self.message_box.recv() => {
