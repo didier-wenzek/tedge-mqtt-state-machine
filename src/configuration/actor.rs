@@ -119,7 +119,7 @@ impl ConfigManager {
         id: String,
         request: ConfigUpdateRequest,
     ) -> ConfigUpdateRequestState {
-        let short_id = id.rsplit_once('/').unwrap_or((&id,"")).1;
+        let short_id = id.rsplit_once('/').unwrap_or((&id, "")).1;
         let path = format!("/tmp/configuration.download.{short_id}");
         let download = Download::new(&id, &request, &path);
         self.downloads.push(tokio::spawn(download.execute()));

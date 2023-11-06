@@ -1,5 +1,4 @@
-operation = "configuration"
-request = "update"
+operation = "configuration_update"
 
 [init]
 owner = "external"

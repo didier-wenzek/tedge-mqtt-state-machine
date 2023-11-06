@@ -28,8 +28,8 @@ the aim being to let the users adapt the operation implementation by substituing
 The core idea is to use MQTT retained messages to capture the current state of each on-going operation.
 
 - A specific topic is attached to each operation instance.
-   - `tedge/operations/${operation.target}/${operation.type}/{operation.request}/${operation.id}` 
-   - e.g. `tedge/operations/main-device/configuration/update/123456`
+   - `te/${operation.target.topic_id}/cmd/${operation.type}/${operation.id}` 
+   - e.g. `te/device/main///cmd/configuration_update/123456`
 - The messages published over this topic represent the current state of the operation workflow.
    - These messages also give the required information to proceed.
    - e.g. `{ "status": "Requested", "operation": "ConfigurationUpdate", "target": "mosquitto", "url": "https://..."}` 
@@ -184,21 +184,21 @@ $ RUST_LOG=debug target/debug/tedge-mqtt-state-machine
 On start, this service loads all the workflows in `operations/*.toml`.
 An example is provided: `operations/updated_configuration_operation.toml`.
 
-On start, `tedge-mqtt-state-machine` subscribes to `tedge/operations/+/+/+/+`,
+On start, `tedge-mqtt-state-machine` subscribes to `te/+/+/+/+/cmd/+/+`,
 watching for workflow state updates for operations keyed as
-`tedge/operations/{subsystem}/{operation}/{request}/{instance}`.
+`te/{target.topic_id}/cmd/{operation}/{instance}`.
 
 To follow what's going on, the simpler is to subscribe to the same topic:
 
 ```shell
-$ tedge mqtt sub 'tedge/operations/+/+/+/+'
+$ tedge mqtt sub 'te/+/+/+/+/cmd/+/+'
 ```
 
 Own can then trigger an operation (mimicking the cloud mapper).
 
 ```shell
 $ tedge mqtt pub \
-    tedge/operations/main-device/configuration/update/123 \
+    te/device/main///cmd/configuration_update/123 \
     '{ "status":"init", "target":"mosquito", "src_url":"https://there", "sha256":"okay" }'
 ```
 
@@ -210,7 +210,7 @@ So one has to simulate this *external* system that is responsible for this state
 
 ```shell
 $ tedge mqtt pub \
-    tedge/operations/main-device/configuration/update/123 \
+    te/device/main///cmd/configuration_update/123 \
     '{ "status":"scheduled", "target":"mosquito", "src_url":"https://there", "sha256":"okay" }'
 ```
 
@@ -228,5 +228,5 @@ The assumption is then that the initiator of this operation (in practice the clo
 clears the operation instance. This is done by sending a retained empty message on the associated topic.
 
 ```shell
-$ tedge mqtt pub --retain tedge/operations/main-device/configuration/update/123 ''
+$ tedge mqtt pub --retain te/device/main///cmd/configuration_update/123 ''
 ```

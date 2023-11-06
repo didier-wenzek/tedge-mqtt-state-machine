@@ -7,7 +7,7 @@ use tedge_mqtt_ext::{Topic, TopicFilter};
 /// There is a one-to-one relationship between an OperationKey
 /// and the MQTT topic on which the operation instance state are published.
 ///
-/// `tedge/operations/{subsystem}/{operation}/{request}/{instance}`
+/// `te/{subsystem topic id}/cmd/{operation}/{instance}`
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct OperationKey {
     /// The subsystem to which the operation applies:
@@ -17,18 +17,13 @@ pub struct OperationKey {
     pub subsystem: String,
 
     /// The operation type
-    /// - configuration,
+    /// - configuration upload,
+    /// - configuration update,
     /// - firmware update,
     /// - software update,
+    /// - software list,
     /// - ...
     pub operation: String,
-
-    /// The operation request
-    /// - list
-    /// - update,
-    /// - remove,
-    /// - ...
-    pub request: String,
 
     /// The operation instance id
     pub instance: String,
@@ -46,23 +41,27 @@ impl TryFrom<&String> for OperationKey {
     type Error = String;
 
     fn try_from(topic: &String) -> Result<Self, Self::Error> {
-        let mut subsystem = String::new();
+        let mut subsystem_1 = String::new();
+        let mut subsystem_2 = String::new();
+        let mut subsystem_3 = String::new();
+        let mut subsystem_4 = String::new();
         let mut operation = String::new();
-        let mut request = String::new();
         let mut instance = String::new();
         scanf::sscanf!(
             &topic,
-            "tedge/operations/{}/{}/{}/{}",
-            subsystem,
+            "te/{}/{}/{}/{}/cmd/{}/{]",
+            subsystem_1,
+            subsystem_2,
+            subsystem_3,
+            subsystem_4,
             operation,
-            request,
             instance
         )
         .map_err(|_| format!("Not an operation topic: {}", topic))?;
+        let subsystem = format!("{subsystem_1}/{subsystem_2}/{subsystem_3}/{subsystem_4}");
         Ok(OperationKey {
             subsystem,
             operation,
-            request,
             instance,
         })
     }
@@ -80,8 +79,8 @@ impl TryFrom<&OperationKey> for Topic {
 impl From<&OperationKey> for String {
     fn from(value: &OperationKey) -> Self {
         format!(
-            "tedge/operations/{}/{}/{}/{}",
-            value.subsystem, value.operation, value.request, value.instance,
+            "te/{}/cmd/{}/{}",
+            value.subsystem, value.operation, value.instance,
         )
     }
 }
@@ -95,10 +94,10 @@ impl From<&OperationKey> for String {
 /// An OperationFilter translates into an MQTT topic filter.
 ///
 /// For instance, the filter of a plugin that handles all configuration related requests
-/// on the main device and the child devices is `tedge/operations/+/configuration/+/+`
+/// on the main device and the child devices is `te/device/+///cmd/configuration/+`
 ///
 /// A workflow definition that overrides the configuration update requests on the main-device
-/// is associated to the filter `tedge/operations/main-device/configuration/update/+`
+/// is associated to the filter `te/device/main///cmd/configuration/+`
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct OperationFilter {
     /// The systems to which this filter applies
@@ -110,11 +109,6 @@ pub struct OperationFilter {
     ///
     /// None stands for any operation (this is the `+` MQTT wildcard).
     pub operation: Option<String>,
-
-    /// The requests to which this filter applies
-    ///
-    /// None stands for any request (this is the `+` MQTT wildcard).
-    pub request: Option<String>,
 }
 
 impl TryFrom<&OperationFilter> for TopicFilter {
@@ -122,10 +116,13 @@ impl TryFrom<&OperationFilter> for TopicFilter {
 
     fn try_from(value: &OperationFilter) -> Result<Self, Self::Error> {
         let topic_filter = format!(
-            "tedge/operations/{}/{}/{}/+",
-            value.subsystem.as_ref().map(|s| s.as_ref()).unwrap_or("+"),
+            "te/{}/cmd/{}/+",
+            value
+                .subsystem
+                .as_ref()
+                .map(|s| s.as_ref())
+                .unwrap_or("+/+/+/+"),
             value.operation.as_ref().map(|s| s.as_ref()).unwrap_or("+"),
-            value.request.as_ref().map(|s| s.as_ref()).unwrap_or("+")
         );
         TopicFilter::new(&topic_filter)
             .map_err(|_| format!("Not a valid topic filter: {topic_filter}"))

@@ -52,7 +52,7 @@ impl OperationsActor {
     }
 
     pub fn subscriptions() -> TopicFilter {
-        TopicFilter::new_unchecked("tedge/operations/+/+/+/+")
+        TopicFilter::new_unchecked("te/+/+/+/+/cmd/+/+")
     }
 
     pub fn new(
